@@ -2,18 +2,12 @@ const mongoose = require("mongoose");
 
 const connectDB = async () => {
   try {
-    await mongoose.connect(
-      "mongodb+srv://akhil0903:YOUR_PASSWORD@cluster0.i39z9qh.mongodb.net/telegramDB?retryWrites=true&w=majority",
-      {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-      }
-    );
+    await mongoose.connect(process.env.MONGO_URI);
 
-    console.log("MongoDB connected");
+    console.log("MongoDB Connected");
   } catch (err) {
     console.error("DB connection error:", err.message);
-    process.exit(1); // stop server if DB fails
+    process.exit(1);
   }
 };
 
