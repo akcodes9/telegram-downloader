@@ -2,7 +2,7 @@
 // Telegram Downloader (MongoDB Connected)
 // ===============================
 
-const API = "http://localhost:3000";
+const API = "https://telegram-downloader-laaq.onrender.com";
 
 let downloadQueue = [];
 let isDownloading = false;

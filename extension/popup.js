@@ -1,5 +1,4 @@
-const API = "http://localhost:3000";
-
+const API = "https://telegram-downloader-laaq.onrender.com";
 document.addEventListener("DOMContentLoaded", async () => {
   const statusDiv = document.getElementById("status");
 
