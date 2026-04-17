@@ -17,6 +17,10 @@ const userSchema = new mongoose.Schema({
     default: false,
   },
 
+  razorpayPaymentId: {
+    type: String,
+  },
+
   createdAt: {
     type: Date,
     default: Date.now,

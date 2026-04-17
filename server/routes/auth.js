@@ -5,21 +5,18 @@ const User = require("../models/User");
 
 const router = express.Router();
 
-// ✅ Register
+// ✅ REGISTER
 router.post("/register", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // check if user exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ error: "User already exists" });
     }
 
-    // hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // create user
     const user = new User({
       email,
       password: hashedPassword,
@@ -34,18 +31,16 @@ router.post("/register", async (req, res) => {
   }
 });
 
-// ✅ Login
+// ✅ LOGIN
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // find user
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({ error: "Invalid credentials" });
     }
 
-    // compare password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ error: "Invalid credentials" });

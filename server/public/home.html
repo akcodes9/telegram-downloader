@@ -1,17 +1,16 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Universal Media Downloader</title>
 
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 
     <style>
       body {
-        background: #0b0b0b;
-        color: white;
+        margin: 0;
         font-family: Arial, sans-serif;
+        background: #0f172a;
+        color: white;
         text-align: center;
       }
 
@@ -20,11 +19,11 @@
       }
 
       .card {
-        background: #1a1a1a;
+        background: #1e293b;
         padding: 20px;
         margin: 20px auto;
         border-radius: 12px;
-        width: 300px;
+        width: 320px;
       }
 
       button {
@@ -32,28 +31,30 @@
         padding: 12px;
         margin-top: 10px;
         border: none;
-        border-radius: 8px;
-        font-size: 16px;
+        border-radius: 6px;
         cursor: pointer;
+        font-weight: bold;
       }
 
       .blue {
-        background: #1e88e5;
+        background: #3b82f6;
       }
       .green {
-        background: #2e7d32;
+        background: #22c55e;
       }
       .red {
-        background: #c62828;
+        background: #ef4444;
+      }
+
+      .premium {
+        color: #22c55e;
       }
     </style>
   </head>
 
   <body>
     <h1>Universal Media Downloader</h1>
-    <p>Download videos & images from Telegram, WhatsApp, Redgifs & more</p>
 
-    <!-- Tools -->
     <div class="card">
       <h3>Tools</h3>
       <button class="blue">Telegram Downloader</button>
@@ -61,10 +62,11 @@
       <button class="blue">Redgifs Downloader</button>
     </div>
 
-    <!-- Dynamic Account Section -->
-    <div id="account-section"></div>
+    <div id="account"></div>
 
     <script>
+      const API = "https://telegram-downloader-laaq.onrender.com";
+
       function getUser() {
         return JSON.parse(localStorage.getItem("user"));
       }
@@ -78,107 +80,109 @@
         renderUI();
       }
 
-      function login() {
-        const user = {
-          email: "user@example.com",
-          isPremium: false,
+      function goToAuth() {
+        window.location.href = "/auth.html";
+      }
+
+      // 🔥 PAYMENT FUNCTION (WITH HANDLER)
+      async function createOrder() {
+        const user = getUser();
+
+        if (!user) {
+          alert("Please login first");
+          return;
+        }
+
+        const res = await fetch(API + "/create-order", {
+          method: "POST",
+        });
+
+        const data = await res.json();
+
+        const options = {
+          key: "rzp_live_SeGrQ7HuBV0Ypj",
+          amount: data.amount,
+          currency: data.currency,
+          order_id: data.id,
+          name: "Universal Downloader",
+          description: "Premium Access",
+
+          handler: async function (response) {
+            // 🔥 THIS IS THE IMPORTANT PART
+            const verify = await fetch(API + "/verify-payment", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                ...response,
+                userId: user.id,
+              }),
+            });
+
+            const result = await verify.json();
+
+            if (result.success) {
+              alert("Payment successful!");
+
+              // update local user state
+              user.isPremium = true;
+              setUser(user);
+
+              renderUI();
+            } else {
+              alert("Payment verification failed");
+            }
+          },
         };
 
-        setUser(user);
-        renderUI();
+        const rzp = new Razorpay(options);
+        rzp.open();
       }
 
-      async function createOrder() {
-        try {
-          const res = await fetch("/create-order", {
-            method: "POST",
-          });
-
-          const data = await res.json();
-
-          const options = {
-            key: "rzp_live_SeGrQ7HuBV0Ypj",
-            amount: data.amount,
-            currency: data.currency,
-            order_id: data.id,
-            name: "Universal Downloader",
-            description: "Premium Access",
-
-            handler: async function (response) {
-              const verifyRes = await fetch("/verify-payment", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify(response),
-              });
-
-              const result = await verifyRes.json();
-
-              if (result.success) {
-                alert("Payment verified!");
-
-                const user = getUser();
-                user.isPremium = true;
-
-                setUser(user);
-                renderUI();
-              } else {
-                alert("Payment verification failed");
-              }
-            },
-          };
-
-          const rzp = new Razorpay(options);
-          rzp.open();
-        } catch (err) {
-          console.error(err);
-          alert("Payment failed");
-        }
-      }
-
+      // cancel plan (UI only for now)
       function cancelPlan() {
         const user = getUser();
         user.isPremium = false;
-
         setUser(user);
         renderUI();
       }
 
+      // 🔥 UI RENDER
       function renderUI() {
+        const container = document.getElementById("account");
         const user = getUser();
-        const container = document.getElementById("account-section");
 
         if (!user) {
           container.innerHTML = `
-          <div class="card">
-            <h3>Account</h3>
-            <button class="blue" onclick="login()">Login / Register</button>
-          </div>
-        `;
+      <div class="card">
+        <h3>Account</h3>
+        <button class="blue" onclick="goToAuth()">Login / Register</button>
+      </div>
+    `;
           return;
         }
 
         if (!user.isPremium) {
           container.innerHTML = `
-          <div class="card">
-            <h3>${user.email}</h3>
-            <p>Free Plan</p>
-            <button class="green" onclick="createOrder()">Upgrade ₹200</button>
-            <button class="red" onclick="logout()">Logout</button>
-          </div>
-        `;
+      <div class="card">
+        <h3>${user.email}</h3>
+        <p>Free Plan</p>
+        <button class="green" onclick="createOrder()">Upgrade ₹200</button>
+        <button class="red" onclick="logout()">Logout</button>
+      </div>
+    `;
           return;
         }
 
         container.innerHTML = `
-        <div class="card">
-          <h3>${user.email}</h3>
-          <p style="color:lightgreen;">Premium Active ✅</p>
-          <button class="red" onclick="cancelPlan()">Cancel Plan</button>
-          <button class="red" onclick="logout()">Logout</button>
-        </div>
-      `;
+    <div class="card">
+      <h3>${user.email}</h3>
+      <p class="premium">Premium Active ✅</p>
+      <button class="red" onclick="cancelPlan()">Cancel Plan</button>
+      <button class="red" onclick="logout()">Logout</button>
+    </div>
+  `;
       }
 
       renderUI();

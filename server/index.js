@@ -6,6 +6,7 @@ const path = require("path");
 const connectDB = require("./db");
 const verifyPayment = require("./paymentVerification");
 const authRoutes = require("./routes/auth");
+const userRoutes = require("./routes/user");
 
 const app = express();
 
@@ -32,17 +33,19 @@ app.get("/", (req, res) => {
 // Auth routes
 app.use("/api/auth", authRoutes);
 
-// Create Razorpay order
+// User routes (NEW)
+app.use("/api/user", userRoutes);
+
+// Create order
 app.post("/create-order", async (req, res) => {
   try {
     const options = {
-      amount: 20000, // ₹200 (in paise)
+      amount: 20000,
       currency: "INR",
       receipt: "order_" + Date.now(),
     };
 
     const order = await razorpay.orders.create(options);
-
     res.json(order);
   } catch (err) {
     console.error(err);
@@ -50,12 +53,11 @@ app.post("/create-order", async (req, res) => {
   }
 });
 
-// Payment verification
+// Verify payment
 app.post("/verify-payment", verifyPayment);
 
 // ================= STATIC FILES =================
 
-// Serve frontend (from /public)
 app.use(express.static(path.join(__dirname, "public")));
 
 app.get("*", (req, res) => {
