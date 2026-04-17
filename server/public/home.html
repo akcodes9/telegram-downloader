@@ -1,136 +1,187 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Universal Media Downloader</title>
+
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 
     <style>
       body {
-        font-family: Arial;
-        background: #0f0f0f;
+        background: #0b0b0b;
         color: white;
+        font-family: Arial, sans-serif;
         text-align: center;
-        padding: 50px;
       }
 
       h1 {
-        margin-bottom: 10px;
-      }
-
-      .tagline {
-        color: #aaa;
-        margin-bottom: 30px;
+        margin-top: 40px;
       }
 
       .card {
-        background: #1c1c1c;
+        background: #1a1a1a;
         padding: 20px;
-        border-radius: 10px;
-        width: 320px;
-        margin: 10px auto;
+        margin: 20px auto;
+        border-radius: 12px;
+        width: 300px;
       }
 
       button {
         width: 100%;
-        padding: 10px;
+        padding: 12px;
         margin-top: 10px;
         border: none;
-        border-radius: 6px;
-        background: #0088cc;
-        color: white;
+        border-radius: 8px;
+        font-size: 16px;
         cursor: pointer;
       }
 
-      .upgrade {
-        background: #28a745;
+      .blue {
+        background: #1e88e5;
       }
-
-      .footer {
-        margin-top: 40px;
-        font-size: 12px;
-        color: #777;
+      .green {
+        background: #2e7d32;
+      }
+      .red {
+        background: #c62828;
       }
     </style>
   </head>
 
   <body>
     <h1>Universal Media Downloader</h1>
-    <div class="tagline">
-      Download videos & images from Telegram, WhatsApp, Redgifs & more
-    </div>
+    <p>Download videos & images from Telegram, WhatsApp, Redgifs & more</p>
 
+    <!-- Tools -->
     <div class="card">
       <h3>Tools</h3>
-
-      <button onclick="openTelegram()">Telegram Downloader</button>
-      <button onclick="comingSoon()">WhatsApp Downloader</button>
-      <button onclick="comingSoon()">Redgifs Downloader</button>
+      <button class="blue">Telegram Downloader</button>
+      <button class="blue">WhatsApp Downloader</button>
+      <button class="blue">Redgifs Downloader</button>
     </div>
 
-    <div class="card">
-      <h3>Account</h3>
-
-      <button onclick="openAuth()">Login / Register</button>
-      <button class="upgrade" onclick="upgrade()">Upgrade (₹200)</button>
-    </div>
-
-    <div class="footer">Built for personal use. Respect platform policies.</div>
-
-    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <!-- Dynamic Account Section -->
+    <div id="account-section"></div>
 
     <script>
-      const API = "https://telegram-downloader-laaq.onrender.com";
-
-      function openTelegram() {
-        alert("Use the Chrome Extension for Telegram downloads");
+      function getUser() {
+        return JSON.parse(localStorage.getItem("user"));
       }
 
-      function comingSoon() {
-        alert("Coming soon");
+      function setUser(user) {
+        localStorage.setItem("user", JSON.stringify(user));
       }
 
-      function openAuth() {
-        window.location.href = "/auth.html";
+      function logout() {
+        localStorage.removeItem("user");
+        renderUI();
       }
 
-      async function upgrade() {
-        const userId = localStorage.getItem("userId");
+      function login() {
+        const user = {
+          email: "user@example.com",
+          isPremium: false,
+        };
 
-        if (!userId) {
-          alert("Login first");
+        setUser(user);
+        renderUI();
+      }
+
+      async function createOrder() {
+        try {
+          const res = await fetch("/create-order", {
+            method: "POST",
+          });
+
+          const data = await res.json();
+
+          const options = {
+            key: "rzp_live_SeGrQ7HuBV0Ypj",
+            amount: data.amount,
+            currency: data.currency,
+            order_id: data.id,
+            name: "Universal Downloader",
+            description: "Premium Access",
+
+            handler: async function (response) {
+              const verifyRes = await fetch("/verify-payment", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify(response),
+              });
+
+              const result = await verifyRes.json();
+
+              if (result.success) {
+                alert("Payment verified!");
+
+                const user = getUser();
+                user.isPremium = true;
+
+                setUser(user);
+                renderUI();
+              } else {
+                alert("Payment verification failed");
+              }
+            },
+          };
+
+          const rzp = new Razorpay(options);
+          rzp.open();
+        } catch (err) {
+          console.error(err);
+          alert("Payment failed");
+        }
+      }
+
+      function cancelPlan() {
+        const user = getUser();
+        user.isPremium = false;
+
+        setUser(user);
+        renderUI();
+      }
+
+      function renderUI() {
+        const user = getUser();
+        const container = document.getElementById("account-section");
+
+        if (!user) {
+          container.innerHTML = `
+          <div class="card">
+            <h3>Account</h3>
+            <button class="blue" onclick="login()">Login / Register</button>
+          </div>
+        `;
           return;
         }
 
-        const res = await fetch(`${API}/create-order`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId }),
-        });
+        if (!user.isPremium) {
+          container.innerHTML = `
+          <div class="card">
+            <h3>${user.email}</h3>
+            <p>Free Plan</p>
+            <button class="green" onclick="createOrder()">Upgrade ₹200</button>
+            <button class="red" onclick="logout()">Logout</button>
+          </div>
+        `;
+          return;
+        }
 
-        const data = await res.json();
-
-        const options = {
-          key: data.key,
-          amount: data.amount,
-          currency: "INR",
-          name: "Universal Downloader",
-          order_id: data.orderId,
-          handler: async function (response) {
-            await fetch(`${API}/verify-payment`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                ...response,
-                userId,
-              }),
-            });
-
-            alert("Payment successful!");
-          },
-        };
-
-        const rzp = new Razorpay(options);
-        rzp.open();
+        container.innerHTML = `
+        <div class="card">
+          <h3>${user.email}</h3>
+          <p style="color:lightgreen;">Premium Active ✅</p>
+          <button class="red" onclick="cancelPlan()">Cancel Plan</button>
+          <button class="red" onclick="logout()">Logout</button>
+        </div>
+      `;
       }
+
+      renderUI();
     </script>
   </body>
 </html>
