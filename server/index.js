@@ -5,6 +5,7 @@ const path = require("path");
 
 const connectDB = require("./db");
 const verifyPayment = require("./paymentVerification");
+const authRoutes = require("./routes/auth");
 
 const app = express();
 
@@ -15,25 +16,28 @@ app.use(express.json());
 // Connect DB
 connectDB();
 
-// Serve frontend (public folder)
+// Serve frontend
 app.use(express.static(path.join(__dirname, "public")));
 
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "home.html"));
 });
 
-// Razorpay instance (SECRET stays here only)
+// Auth routes
+app.use("/auth", authRoutes);
+
+// Razorpay instance
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
-// ✅ Health check
+// Health check
 app.get("/api", (req, res) => {
   res.send("API running");
 });
 
-// ✅ Create order
+// Create order
 app.post("/create-order", async (req, res) => {
   try {
     const options = {
@@ -51,10 +55,10 @@ app.post("/create-order", async (req, res) => {
   }
 });
 
-// ✅ Verify payment (secure)
+// Verify payment
 app.post("/verify-payment", verifyPayment);
 
-// Start server (IMPORTANT: use dynamic port for Render)
+// Start server (Render compatible)
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
